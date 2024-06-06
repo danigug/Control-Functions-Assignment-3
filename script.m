@@ -50,7 +50,9 @@ B2_c = [0
     -(CR*b^2+CF*a^2)/(Jz*V)];
 
 K=place(A_c,B1_c,[-1 -10 -50 -100])
-Kff = ((m*V^2)/l)*(b/CF-a/CR+(a*K(3)/CR))+l-l*K(3)
+Kff = ((m*V^2)/l)*(b/CF-a/CR+(a*K(3)/CR))+l-b*K(3)
+
+
 
 sim("model.slx")
 
