@@ -1,7 +1,5 @@
-# Ignora i file con estensione .slxc
+# Ignora i file con estensione
 *.slxc
-
-# Ignora i file con estensione .tmp
 *.tmp
 
 # Ignora la cartella slprj e tutto il suo contenuto
@@ -9,3 +7,6 @@ slprj/
 
 # Ignora i file che iniziano con tilde (~)
 *~
+
+*.asv
+*.autosave
