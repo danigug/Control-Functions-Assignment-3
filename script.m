@@ -1,4 +1,6 @@
-clear all; close all; clc
+clear all; 
+% close all;
+clc
 %% Parameters
 m = 1575; % [Kg] vehicle_mass
 Jz = 2875; % [kg*m^2] yaw_mass_moment_inertia
@@ -17,67 +19,37 @@ Tsim = 1500;
 % x = [beta, psi_dot]
 % u = [delta_f, delta_r]
 % y = [beta, psi_dot, rho_G, alfa_f, alfa_r, a_y]
-A=[(-CF-CR)/(m*Vv),(-CF*a+CR*b-m*Vv^2)/(m*Vv^2);
-    (-CF*a+CR*b)/Jz,(-CF*a^2-CR*b^2)/(Jz*Vv)];
-B=[CF/(m*Vv) CR/(m*Vv);
-    (CF*a/Jz) -(CR*b/Jz)];
-C = [1,0
-    0,1
-    (-CR-CF)/(m*Vv^2),(-CF*a+CR*b)/(m*Vv^3)
-    -1, -a/Vv
-    -1, b/Vv
-    (-CR-CF)/(m),(-CF*a+CR*b)/(m*Vv)];
-D = [0 0;
-    0 0;
-    CF/(m*Vv^2) CR/(m*Vv^2)
-    1 0
-    0 1
-    CF/m CR/m];
+
 % G = ss(A,B,C,D);
 V=Vv;
-
-A_c = [0 1 0 0
-    0 -(CF+CR)/(m*V) (CF+CR)/m (CR*b-CF*a)/(m*V)
-    0 0 0 1
-    0 (CR*b-CF*a)/(Jz*V) (CF*a-CR*b)/Jz -(CR*b^2+CF*a^2)/(Jz*V)];
-
-B1_c = [0
-    CF/m
-    0
-    (CF*a)/Jz];
-
-B2_c = [0
-    ((CR*b-CF*a)/(m*V))-V
-    0
-    -(CR*b^2+CF*a^2)/(Jz*V)];
-
-K=place(A_c,B1_c,[-1 -10 -50 -100])
-Kff = ((m*V^2)/l)*(b/CF-a/CR+(a*K(3)/CR))+l-b*K(3)
 
 
 
 %sim("model.slx")
 
 %% Look-up table of control gains
+N_SAMPLES = 13;
+MAX_SPEED = 130; % [km/h]
+DELTA_SPEED = MAX_SPEED/N_SAMPLES;
 
 B1_c = [0
     CF/m
     0
     (CF*a)/Jz];
 
-AM = cell(1,13);
-K_lookup = zeros(13,4);
-Kff_lookup = zeros(13,1);
+AM = cell(1,N_SAMPLES);
+K_lookup = zeros(N_SAMPLES,4);
+Kff_lookup = zeros(N_SAMPLES,1);
 
-for i = 1:13 
-    V(i) = (10*i)/3.6; % speeds from 10 to 130 Km/h expressed in m/s
+for i = 1:N_SAMPLES 
+    V(i) = (DELTA_SPEED*i)/3.6; % speeds from 10 to 130 Km/h expressed in m/s
 
     AM{i} = [0 1 0 0
     0 -(CF+CR)/(m*V(i)) (CF+CR)/m (CR*b-CF*a)/(m*V(i))
     0 0 0 1
     0 (CR*b-CF*a)/(Jz*V(i)) (CF*a-CR*b)/Jz -(CR*b^2+CF*a^2)/(Jz*V(i))];
 
-    K_lookup(i,:) = place(AM{i},B1_c,[-1 -10 -50 -100]);
+    K_lookup(i,:) = place(AM{i},B1_c,[-10 -20 -100 -200]);
     Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
 
 end
@@ -90,14 +62,14 @@ V = 55/3.6;
 
 %% Evaluation along the relevant curvature profile
 selector = 2;
-close all
+% close all
 
 % TO DO: evaluate for different tunings
 
 save_files = false;
 
 V = 60/3.6;
-Tsim = 30;
+Tsim = 60;
 
 sim("model.slx");
 
