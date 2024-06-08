@@ -86,17 +86,18 @@ end
 
 V = 55/3.6;
 
-sim("model.slx");
+% sim("model.slx");
 
 %% Evaluation along the relevant curvature profile
-selector = 1;
+selector = 2;
+close all
 
 % TO DO: evaluate for different tunings
 
 save_files = false;
 
-V = 80/3.6;
-Tsim = 200;
+V = 60/3.6;
+Tsim = 30;
 
 sim("model.slx");
 
@@ -130,6 +131,7 @@ if save_files == true
     filename = sprintf('%s\\Relevant_curvature_profile_lateral_deviation.png',output_dir);
     saveas(fig, filename);
 end
+
 
 name_fig = sprintf('Relevant curvature profile: Vehicle trajectory');
 fig = figure('Name',name_fig);
