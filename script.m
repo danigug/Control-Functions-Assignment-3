@@ -52,6 +52,11 @@ B1_c = [0
     (CF*a)/Jz
     0];
 
+% Linear Quadratic Regulator
+Q=diag([1 1 1 1 1]);
+R=1;
+P_lqr = zeros(N_SAMPLES,5);
+
 for i = 1:N_SAMPLES 
     V(i) = (DELTA_SPEED*i)/3.6; % speeds from 10 to 130 Km/h expressed in m/s
 
@@ -61,13 +66,28 @@ for i = 1:N_SAMPLES
     0 (CR*b-CF*a)/(Jz*V(i)) (CF*a-CR*b)/Jz -(CR*b^2+CF*a^2)/(Jz*V(i)) 0
     1 0 0 0 0];
     
-    
+    % % Pole Placement
     K_lookup(i,:) = place(AM{i},B1_c, poles);
     Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
+    
+    % Linear Quadratic Regulator
+    % [K_lookup(i,:),~,P_lqr(i,:)]=lqr(AM{i}, B1_c, Q, R);
+    % Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
 
 end
 
+%% Gain variations in function of vehicle speed
 
+vout = linspace(10,130,N_SAMPLES);
+
+name_fig1 = sprintf('Gain variations in function of vehicle speed');
+fig1 = figure('Name',name_fig1);
+hold on, grid on
+set(gca,'FontName','Times New Roman','FontSize',12)
+xlabel('V'); ylabel('K');
+plot(vout,K_lookup,'LineWidth', 1.5);
+axis normal
+legend('k1','k2','k3','k4','k_i','Location', 'best')
 
 %% Analysis of single-track model with no control
 
@@ -259,16 +279,15 @@ if save_files == true
 end
 
 %% Obstacle avoidance manoeuvre
-
-%close all;
+close all;
 
 curvature_profile = 4;
 speed_profile = 1;
-V = 85/3.6;
+V = 80/3.6;
 
 % TO DO
 
-Tsim = 30;
+Tsim = 10;
 
 sim("model.slx");
 
@@ -291,7 +310,6 @@ hold on, grid on
 set(gca,'FontName','Times New Roman','FontSize',12)
 xlabel('[m]'); ylabel('[m]');
 plot(Var_trajectory(:,1),Var_trajectory(:,2),'g',X,Y,'b--','LineWidth', 1.5);
-axis normal
 legend('Real','Ideal','Location', 'best')
 
 
@@ -299,11 +317,4 @@ if save_files == true
     filename = sprintf('%s\\Avoidance_test_trajectory.png',output_dir);
     saveas(fig, filename);
 end
-
-%%
-
-
-%% Results plots
-
-% TO DO
 
