@@ -2,6 +2,7 @@ clear all;
 close all;
 clc
 
+save_files = false;
 %% Parameters
 m = 1575; % [Kg] vehicle_mass
 Jz = 2875; % [kg*m^2] yaw_mass_moment_inertia
@@ -18,7 +19,7 @@ N_SAMPLES = 13;
 MAX_SPEED = 130; % [km/h]
 DELTA_SPEED = MAX_SPEED/N_SAMPLES;
 %poles = [-1 -2 -10 -50]; % No integral contribution
-poles = [-1 -5 -50 -20 -30];
+poles = [-5 -7 -10 -15 -30];
 
 % % No integral contribution
 % B1_c = [0
@@ -51,25 +52,24 @@ B1_c = [0
     (CF*a)/Jz
     0];
 
-for i = 5:N_SAMPLES 
+for i = 1:N_SAMPLES 
     V(i) = (DELTA_SPEED*i)/3.6; % speeds from 10 to 130 Km/h expressed in m/s
 
     AM{i} = [0 1 0 0 0
-    0 -(1.03*CF+CR)/(m*V(i)) (1.03*CF+CR)/m (CR*b-1.03*CF*a)/(m*V(i)) 0
+    0 -(CF+CR)/(m*V(i)) (CF+CR)/m (CR*b-CF*a)/(m*V(i)) 0
     0 0 0 1 0
-    0 (CR*b-1.03*CF*a)/(Jz*V(i)) (1.03*CF*a-CR*b)/Jz -(CR*b^2+1.03*CF*a^2)/(Jz*V(i)) 0
+    0 (CR*b-CF*a)/(Jz*V(i)) (CF*a-CR*b)/Jz -(CR*b^2+CF*a^2)/(Jz*V(i)) 0
     1 0 0 0 0];
     
     
     K_lookup(i,:) = place(AM{i},B1_c, poles);
-    Kff_lookup(i) = ((m*V(i)^2)/l)*(b/(1.03*CF)-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
+    Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
 
 end
 
 
 
 %% Analysis of single-track model with no control
-save_files = true;
 
 velocities=[5:1:25,25:5:130]/3.6;
 poles = zeros(length(velocities),2);
@@ -126,7 +126,7 @@ if save_files == true
 end
 
 controlled = false;
-Tsim = 10;
+Tsim = 6;
 speed_profile = 1;
 curvature_profile = 1;
 
@@ -139,7 +139,7 @@ subplot(2,1,1); % 2 rows, 1 column, first subplot
 hold on, grid on
 set(gca,'FontName','Times New Roman','FontSize',12)
 xlabel('[m]'); ylabel('[yaw_rate]');
-plot(tout,beta,'c','LineWidth', 1.5);
+plot(tout,beta,'b','LineWidth', 1.5);
 axis normal
 
 subplot(2,1,2); % 2 rows, 1 column, second subplot
@@ -154,6 +154,8 @@ if save_files == true
     saveas(fig, filename);
 end
 
+controlled = true;
+
 %% Evaluation along the relevant curvature profile
 %close all;
 
@@ -161,8 +163,6 @@ curvature_profile = 1;
 speed_profile = 1;
 
 % TO DO: evaluate for different tunings
-
-save_files = false;
 
 V = 80/3.6;
 Tsim = 200;
@@ -216,10 +216,10 @@ if save_files == true
     saveas(fig, filename);
 end
 
-return;
+
 %% Skid-pad test
 
-close all;
+%close all;
 
 curvature_profile = 2;
 speed_profile = 4;
@@ -228,7 +228,6 @@ speed_profile = 4;
 
 Tsim = 100;
 
-save_files = true;
 sim("model.slx");
 
 name_fig = sprintf('Skidpad test: Lateral deviation');
@@ -261,7 +260,7 @@ end
 
 %% Obstacle avoidance manoeuvre
 
-close all;
+%close all;
 
 curvature_profile = 4;
 speed_profile = 1;
@@ -271,7 +270,6 @@ V = 85/3.6;
 
 Tsim = 30;
 
-save_files = true;
 sim("model.slx");
 
 name_fig = sprintf('Avoidance test: Lateral deviation');
