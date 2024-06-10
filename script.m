@@ -17,32 +17,145 @@ delta_max = 25; % [deg] maximum_steering_angle
 N_SAMPLES = 13;
 MAX_SPEED = 130; % [km/h]
 DELTA_SPEED = MAX_SPEED/N_SAMPLES;
-poles = [-10 -20 -100 -200];
+%poles = [-1 -2 -10 -50]; % No integral contribution
+poles = [-1 -5 -50 -20 -30];
+
+% % No integral contribution
+% B1_c = [0
+%     CF/m
+%     0
+%     (CF*a)/Jz];
+
+AM = cell(1,N_SAMPLES);
+%K_lookup = zeros(N_SAMPLES,4); % No integral contribution
+K_lookup = zeros(N_SAMPLES,5);
+Kff_lookup = zeros(N_SAMPLES,1);
+
+% No integral contribution
+% for i = 1:N_SAMPLES 
+%     V(i) = (DELTA_SPEED*i)/3.6; % speeds from 10 to 130 Km/h expressed in m/s
+% 
+%     AM{i} = [0 1 0 0
+%     0 -(CF+CR)/(m*V(i)) (CF+CR)/m (CR*b-CF*a)/(m*V(i))
+%     0 0 0 1
+%     0 (CR*b-CF*a)/(Jz*V(i)) (CF*a-CR*b)/Jz -(CR*b^2+CF*a^2)/(Jz*V(i))];
+% 
+%     K_lookup(i,:) = place(AM{i},B1_c, poles);
+%     Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
+% 
+% end
 
 B1_c = [0
     CF/m
     0
-    (CF*a)/Jz];
+    (CF*a)/Jz
+    0];
 
-AM = cell(1,N_SAMPLES);
-K_lookup = zeros(N_SAMPLES,4);
-Kff_lookup = zeros(N_SAMPLES,1);
-
-for i = 1:N_SAMPLES 
+for i = 5:N_SAMPLES 
     V(i) = (DELTA_SPEED*i)/3.6; % speeds from 10 to 130 Km/h expressed in m/s
 
-    AM{i} = [0 1 0 0
-    0 -(CF+CR)/(m*V(i)) (CF+CR)/m (CR*b-CF*a)/(m*V(i))
-    0 0 0 1
-    0 (CR*b-CF*a)/(Jz*V(i)) (CF*a-CR*b)/Jz -(CR*b^2+CF*a^2)/(Jz*V(i))];
-
+    AM{i} = [0 1 0 0 0
+    0 -(1.03*CF+CR)/(m*V(i)) (1.03*CF+CR)/m (CR*b-1.03*CF*a)/(m*V(i)) 0
+    0 0 0 1 0
+    0 (CR*b-1.03*CF*a)/(Jz*V(i)) (1.03*CF*a-CR*b)/Jz -(CR*b^2+1.03*CF*a^2)/(Jz*V(i)) 0
+    1 0 0 0 0];
+    
+    
     K_lookup(i,:) = place(AM{i},B1_c, poles);
-    Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
+    Kff_lookup(i) = ((m*V(i)^2)/l)*(b/(1.03*CF)-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
 
 end
 
+
+
+%% Analysis of single-track model with no control
+save_files = true;
+
+velocities=[5:1:25,25:5:130]/3.6;
+poles = zeros(length(velocities),2);
+
+for i = 1:length(velocities)
+    V = velocities(i);
+    
+    % State space definition
+    A=[(-CF-CR)/(m*V),(-CF*a+CR*b-m*V^2)/(m*V^2);
+        (-CF*a+CR*b)/Jz,(-CF*a^2-CR*b^2)/(Jz*V)];
+    B=[CF/(m*V) CR/(m*V);
+        (CF*a/Jz) -(CR*b/Jz)];
+    C = [1,0
+        0,1
+        (-CR-CF)/(m*V^2),(-CF*a+CR*b)/(m*V^3)
+        -1, -a/V
+        -1, b/V
+        (-CR-CF)/(m),(-CF*a+CR*b)/(m*V)];
+    D = [0 0;
+        0 0;
+        CF/(m*V^2) CR/(m*V^2)
+        1 0
+        0 1
+        CF/m CR/m];
+    
+    G = ss(A,B,C,D);
+    [Wn,Z,P]=damp(G);
+    
+    poles(i,:)=P;
+end
+
+% poles
+P1=poles(:,1);
+P2=poles(:,2);
+P1_Real=real(P1);
+P1_Im=imag(P1);
+P2_Real=real(P2);
+P2_Im=imag(P2);
+
+fig=figure('Name','Poles');
+figure(fig)
+scatter(P1_Real,P1_Im,[],1:1:length(velocities))
+hold on
+grid on
+scatter(P2_Real,P2_Im,[],1:1:length(velocities))
+xlabel('Real'),ylabel('Im'),title('Poles'),
+set(gca,'FontName','Times New Roman','FontSize',12)
+
+output_dir = "Results";
+
+if save_files == true
+    filename = sprintf('%s\\Single_track_model_eigenvalues.png',output_dir);
+    saveas(fig, filename);
+end
+
+controlled = false;
+Tsim = 10;
+speed_profile = 1;
+curvature_profile = 1;
+
+
+sim("model.slx");
+
+name_fig = sprintf('Step steering response of single-track model');
+fig = figure('Name',name_fig);
+subplot(2,1,1); % 2 rows, 1 column, first subplot
+hold on, grid on
+set(gca,'FontName','Times New Roman','FontSize',12)
+xlabel('[m]'); ylabel('[yaw_rate]');
+plot(tout,beta,'c','LineWidth', 1.5);
+axis normal
+
+subplot(2,1,2); % 2 rows, 1 column, second subplot
+hold on, grid on
+set(gca,'FontName','Times New Roman','FontSize',12)
+xlabel('[m]'); ylabel('[beta]');
+plot(tout,yaw_rate,'b','LineWidth', 1.5);
+axis normal
+
+if save_files == true
+    filename = sprintf('%s\\Step_steering_response_single_track_model.png',output_dir);
+    saveas(fig, filename);
+end
+
 %% Evaluation along the relevant curvature profile
-close all;
+%close all;
 
 curvature_profile = 1;
 speed_profile = 1;
@@ -103,6 +216,7 @@ if save_files == true
     saveas(fig, filename);
 end
 
+return;
 %% Skid-pad test
 
 close all;
