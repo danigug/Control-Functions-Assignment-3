@@ -2,7 +2,7 @@ clear all;
 close all;
 clc
 
-save_files = false;
+save_files = true;
 %% Parameters
 m = 1575; % [Kg] vehicle_mass
 Jz = 2875; % [kg*m^2] yaw_mass_moment_inertia
@@ -67,12 +67,12 @@ for i = 1:N_SAMPLES
     1 0 0 0 0];
     
     % % Pole Placement
-    K_lookup(i,:) = place(AM{i},B1_c, poles);
-    Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
+    % K_lookup(i,:) = place(AM{i},B1_c, poles);
+    % Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
     
     % Linear Quadratic Regulator
-    % [K_lookup(i,:),~,P_lqr(i,:)]=lqr(AM{i}, B1_c, Q, R);
-    % Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
+    [K_lookup(i,:),~,P_lqr(i,:)]=lqr(AM{i}, B1_c, Q, R);
+    Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
 
 end
 
@@ -80,8 +80,8 @@ end
 
 vout = linspace(10,130,N_SAMPLES);
 
-name_fig1 = sprintf('Gain variations in function of vehicle speed');
-fig1 = figure('Name',name_fig1);
+name_fig = sprintf('Gain variations in function of vehicle speed');
+fig = figure('Name',name_fig);
 hold on, grid on
 set(gca,'FontName','Times New Roman','FontSize',12)
 xlabel('V'); ylabel('K');
@@ -89,6 +89,10 @@ plot(vout,K_lookup,'LineWidth', 1.5);
 axis normal
 legend('k1','k2','k3','k4','k_i','Location', 'best')
 
+if save_files == true
+    filename = sprintf('%s\\Gain variations in function of vehicle speed.png',output_dir);
+    saveas(fig, filename);
+end
 %% Analysis of single-track model with no control
 
 velocities=[5:1:25,25:5:130]/3.6;
@@ -158,7 +162,7 @@ fig = figure('Name',name_fig);
 subplot(2,1,1); % 2 rows, 1 column, first subplot
 hold on, grid on
 set(gca,'FontName','Times New Roman','FontSize',12)
-xlabel('[m]'); ylabel('[yaw_rate]');
+xlabel('[m]'); ylabel('[yaw rate]');
 plot(tout,beta,'b','LineWidth', 1.5);
 axis normal
 
