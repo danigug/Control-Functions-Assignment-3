@@ -1,8 +1,10 @@
-clear all; 
+%clear all; 
 close all;
 clc
 
 save_files = true;
+output_dir = "Results";
+
 %% Parameters
 m = 1575; % [Kg] vehicle_mass
 Jz = 2875; % [kg*m^2] yaw_mass_moment_inertia
@@ -10,7 +12,7 @@ a = 1.3; % [m] front_semi_wheelbase
 b = 1.5; % [m] rear_semi_wheelbase
 l = a+b;
 CF = 2*60000; % [N/rad] front_axle_cornering_stiffness
-CR = 2*60000; % [N/rad] rear_axle_cornering_stiffness
+CR = 2*57000; % [N/rad] rear_axle_cornering_stiffness
 
 delta_max = 25; % [deg] maximum_steering_angle
 
@@ -18,48 +20,32 @@ delta_max = 25; % [deg] maximum_steering_angle
 N_SAMPLES = 13;
 MAX_SPEED = 130; % [km/h]
 DELTA_SPEED = MAX_SPEED/N_SAMPLES;
-%poles = [-1 -2 -10 -50]; % No integral contribution
-poles = [-5 -7 -10 -15 -30];
 
-% % No integral contribution
-% B1_c = [0
-%     CF/m
-%     0
-%     (CF*a)/Jz];
+% desired_poles = [-1 -2 -3 -5 -8];
+% desired_poles = [-2.5 -3.5 -3 -5 -8];
+desired_poles = [-5 -7 -10 -15 -30]; 
 
 AM = cell(1,N_SAMPLES);
-%K_lookup = zeros(N_SAMPLES,4); % No integral contribution
 K_lookup = zeros(N_SAMPLES,5);
 Kff_lookup = zeros(N_SAMPLES,1);
-
-% No integral contribution
-% for i = 1:N_SAMPLES 
-%     V(i) = (DELTA_SPEED*i)/3.6; % speeds from 10 to 130 Km/h expressed in m/s
-% 
-%     AM{i} = [0 1 0 0
-%     0 -(CF+CR)/(m*V(i)) (CF+CR)/m (CR*b-CF*a)/(m*V(i))
-%     0 0 0 1
-%     0 (CR*b-CF*a)/(Jz*V(i)) (CF*a-CR*b)/Jz -(CR*b^2+CF*a^2)/(Jz*V(i))];
-% 
-%     K_lookup(i,:) = place(AM{i},B1_c, poles);
-%     Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
-% 
-% end
 
 B1_c = [0
     CF/m
     0
     (CF*a)/Jz
-    0];
+    0]; %last row due to integral contribution
 
 % Linear Quadratic Regulator
 Q=diag([1 1 1 1 1]);
+% Q=diag([10 1 1 1 1]);
+
 R=1;
 P_lqr = zeros(N_SAMPLES,5);
 
 for i = 1:N_SAMPLES 
     V(i) = (DELTA_SPEED*i)/3.6; % speeds from 10 to 130 Km/h expressed in m/s
 
+    % Added last column/row for integral contribution
     AM{i} = [0 1 0 0 0
     0 -(CF+CR)/(m*V(i)) (CF+CR)/m (CR*b-CF*a)/(m*V(i)) 0
     0 0 0 1 0
@@ -67,9 +53,9 @@ for i = 1:N_SAMPLES
     1 0 0 0 0];
     
     % % Pole Placement
-    % K_lookup(i,:) = place(AM{i},B1_c, poles);
+    % K_lookup(i,:) = place(AM{i},B1_c, desired_poles);
     % Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
-    
+
     % Linear Quadratic Regulator
     [K_lookup(i,:),~,P_lqr(i,:)]=lqr(AM{i}, B1_c, Q, R);
     Kff_lookup(i) = ((m*V(i)^2)/l)*(b/CF-a/CR+(a*K_lookup(i,3)/CR))+l-b*K_lookup(i,3);
@@ -100,7 +86,7 @@ poles = zeros(length(velocities),2);
 
 for i = 1:length(velocities)
     V = velocities(i);
-    
+
     % State space definition
     A=[(-CF-CR)/(m*V),(-CF*a+CR*b-m*V^2)/(m*V^2);
         (-CF*a+CR*b)/Jz,(-CF*a^2-CR*b^2)/(Jz*V)];
@@ -118,10 +104,10 @@ for i = 1:length(velocities)
         1 0
         0 1
         CF/m CR/m];
-    
+
     G = ss(A,B,C,D);
     [Wn,Z,P]=damp(G);
-    
+
     poles(i,:)=P;
 end
 
@@ -142,7 +128,6 @@ scatter(P2_Real,P2_Im,[],1:1:length(velocities))
 xlabel('Real'),ylabel('Im'),title('Poles'),
 set(gca,'FontName','Times New Roman','FontSize',12)
 
-output_dir = "Results";
 
 if save_files == true
     filename = sprintf('%s\\Single_track_model_eigenvalues.png',output_dir);
@@ -150,7 +135,7 @@ if save_files == true
 end
 
 controlled = false;
-Tsim = 6;
+Tsim = 4;
 speed_profile = 1;
 curvature_profile = 1;
 
@@ -162,15 +147,15 @@ fig = figure('Name',name_fig);
 subplot(2,1,1); % 2 rows, 1 column, first subplot
 hold on, grid on
 set(gca,'FontName','Times New Roman','FontSize',12)
-xlabel('[m]'); ylabel('[yaw rate]');
-plot(tout,beta,'b','LineWidth', 1.5);
+xlabel('[s]'); ylabel('[yaw rate]');
+plot(tout,yaw_rate,'b','LineWidth', 1.5);
 axis normal
 
 subplot(2,1,2); % 2 rows, 1 column, second subplot
 hold on, grid on
 set(gca,'FontName','Times New Roman','FontSize',12)
-xlabel('[m]'); ylabel('[beta]');
-plot(tout,yaw_rate,'b','LineWidth', 1.5);
+xlabel('[s]'); ylabel('[beta]');
+plot(tout,beta,'b','LineWidth', 1.5);
 axis normal
 
 if save_files == true
@@ -219,6 +204,8 @@ xlabel('[s]'); ylabel('[m]');
 plot(tout,e1, 'LineWidth', 1)
 axis normal
 
+
+
 if save_files == true
     filename = sprintf('%s\\Relevant_curvature_profile_lateral_deviation.png',output_dir);
     saveas(fig, filename);
@@ -240,17 +227,20 @@ if save_files == true
     saveas(fig, filename);
 end
 
+return;
 
 %% Skid-pad test
 
 %close all;
 
+Tsim = 100;
 curvature_profile = 2;
 speed_profile = 4;
 
-% TO DO
-
-Tsim = 100;
+% Used in steady-state evaluations
+% speed_profile = 1;
+% V = 80/3.6;
+% Tsim = 6;
 
 sim("model.slx");
 
@@ -282,14 +272,13 @@ if save_files == true
     saveas(fig, filename);
 end
 
+
 %% Obstacle avoidance manoeuvre
-close all;
+%close all;
 
 curvature_profile = 4;
 speed_profile = 1;
 V = 80/3.6;
-
-% TO DO
 
 Tsim = 10;
 
@@ -321,4 +310,36 @@ if save_files == true
     filename = sprintf('%s\\Avoidance_test_trajectory.png',output_dir);
     saveas(fig, filename);
 end
+
+%% dasdsadsadsadasdasdasdsa
+
+%close all;
+
+% Tsim = 100;
+% curvature_profile = 2;
+% speed_profile = 4;
+
+% Used in steady-state evaluations
+% speed_profile = 1;
+% V = 80/3.6;
+% Tsim = 6;
+
+% sim("model.slx");
+% 
+% name_fig = sprintf('Skidpad test: Lateral deviation');
+% fig = figure('Name',name_fig);
+% hold on, grid on
+% set(gca,'FontName','Times New Roman','FontSize',12)
+% xlabel('[s]'); ylabel('[m]');
+% plot(tout,delta, 'LineWidth', 1)
+% axis normal
+
+% if save_files == true
+%     filename = sprintf('%s\\Skidpad_lateral_deviation.png',output_dir);
+%     saveas(fig, filename);
+% end
+
+
+% return;
+
 
