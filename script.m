@@ -1,4 +1,4 @@
-%clear all; 
+clear all; 
 close all;
 clc
 
@@ -36,8 +36,8 @@ B1_c = [0
     0]; %last row due to integral contribution
 
 % Linear Quadratic Regulator
-Q=diag([1 1 1 1 1]);
-% Q=diag([10 1 1 1 1]);
+% Q=diag([1 1 1 1 1]);
+Q=diag([10 1 1 1 1]);
 
 R=1;
 P_lqr = zeros(N_SAMPLES,5);
@@ -138,7 +138,7 @@ controlled = false;
 Tsim = 4;
 speed_profile = 1;
 curvature_profile = 1;
-
+V = 60/3.6;
 
 sim("model.slx");
 
@@ -227,7 +227,10 @@ if save_files == true
     saveas(fig, filename);
 end
 
-return;
+
+
+
+pause(1)
 
 %% Skid-pad test
 
@@ -311,35 +314,107 @@ if save_files == true
     saveas(fig, filename);
 end
 
-%% dasdsadsadsadasdasdasdsa
+name_fig = sprintf('Relevant curvature profile: Useful variables');
+fig = figure('Name',name_fig);
+hold on, grid on
+set(gca,'FontName','Times New Roman','FontSize',12)
+xlabel('[m]'); ylabel('[m]');
+title('Relevant variables');
+axis normal
 
+subplot(2, 3, 1);
+plot(tout, beta);
+title('Sideslip angle');
+xlabel('s');
+ylabel('rad');
+
+subplot(2, 3, 2);
+plot(tout, alpha_F);
+title('Front slip angle');
+xlabel('s');
+ylabel('rad');
+
+subplot(2, 3, 3);
+plot(tout, alpha_R);
+title('Rear slip angle');
+xlabel('s');
+ylabel('rad');
+
+subplot(2, 3, 4);
+plot(tout, yaw_rate );
+title('Yaw rate');
+xlabel('s');
+ylabel('rad/s');
+
+subplot(2, 3, 5);
+plot(tout, e2 );
+title('Heading angle error');
+xlabel('s');
+ylabel('rad');
+
+subplot(2, 3, 6);
+plot(tout, ay );
+title('Lateral acceleration');
+xlabel('s');
+ylabel('m/s^2');
+
+fig.Position(3) = fig.Position(3) * 1.5;  % Increase width
+
+if save_files == true
+    filename = sprintf('%s\\Avoidance_test_Relevant_Variables.png',output_dir);
+    saveas(fig, filename);
+end
+
+%% Variation of rear cornering stiffness
+clc;
 %close all;
-
-% Tsim = 100;
-% curvature_profile = 2;
-% speed_profile = 4;
-
-% Used in steady-state evaluations
-% speed_profile = 1;
-% V = 80/3.6;
-% Tsim = 6;
-
-% sim("model.slx");
-% 
-% name_fig = sprintf('Skidpad test: Lateral deviation');
-% fig = figure('Name',name_fig);
-% hold on, grid on
-% set(gca,'FontName','Times New Roman','FontSize',12)
-% xlabel('[s]'); ylabel('[m]');
-% plot(tout,delta, 'LineWidth', 1)
-% axis normal
-
-% if save_files == true
-%     filename = sprintf('%s\\Skidpad_lateral_deviation.png',output_dir);
-%     saveas(fig, filename);
-% end
+clear delta_angles K_gradient
 
 
-% return;
+CR_start = 2*57000;
+
+s = (0.8:0.1:1.2);
+
+Tsim = 1;
+curvature_profile = 2;
+speed_profile = 1;
+V = 80/3.6;
+K_gradient = zeros(length(s),1);
+
+for j=1:length(s)
+    CR = s(j)*CR_start;
+    K_gradient(j) = m/l * (b/CF - a/CR); % Understeering gradient
+
+    sim("model.slx");
+    
+    delta_angles(j,:) = delta';
+
+end
+
+
+name_fig = sprintf('Control input at different CR values');
+fig = figure('Name',name_fig);
+hold on, grid on
+set(gca,'FontName','Times New Roman','FontSize',12)
+xlabel('[s]'); ylabel('Steering angle [rad]');
+
+for i=1:length(s)
+    plot(tout,delta_angles(i,:),'LineWidth',1);
+
+end
+axis normal
+
+legend_labels = cell(length(s), 1);
+for i = 1:length(s)
+    legend_labels{i} = sprintf('%.1f*CR, K=%.4f', s(i), K_gradient(i));
+end
+
+legend(legend_labels);
+
+if save_files == true
+    filename = sprintf('%s\\Control input at different CR.png',output_dir);
+    saveas(fig, filename);
+end
+
 
 
