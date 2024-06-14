@@ -1,4 +1,4 @@
-clear all; 
+clear all;
 close all;
 clc
 
@@ -38,7 +38,6 @@ B1_c = [0
 % Linear Quadratic Regulator
 % Q=diag([1 1 1 1 1]);
 Q=diag([10 1 1 1 1]);
-
 R=1;
 P_lqr = zeros(N_SAMPLES,5);
 
@@ -79,6 +78,7 @@ if save_files == true
     filename = sprintf('%s\\Gain variations in function of vehicle speed.png',output_dir);
     saveas(fig, filename);
 end
+
 %% Analysis of single-track model with no control
 
 velocities=[5:1:25,25:5:130]/3.6;
@@ -171,8 +171,6 @@ controlled = true;
 curvature_profile = 1;
 speed_profile = 1;
 
-% TO DO: evaluate for different tunings
-
 V = 80/3.6;
 Tsim = 200;
 
@@ -182,7 +180,7 @@ name_fig = sprintf('Relevant curvature profile');
 fig = figure('Name',name_fig);
 hold on, grid on
 set(gca,'FontName','Times New Roman','FontSize',12)
-xlabel('[s]'); ylabel('[m^-1]');
+xlabel('[s]'); ylabel('m^{-1}');
 plot(tout,Kl_profile, 'LineWidth', 1)
 axis tight;  
 currentYlim = ylim;  
@@ -203,7 +201,6 @@ set(gca,'FontName','Times New Roman','FontSize',12)
 xlabel('[s]'); ylabel('[m]');
 plot(tout,e1, 'LineWidth', 1)
 axis normal
-
 
 
 if save_files == true
@@ -228,8 +225,6 @@ if save_files == true
 end
 
 
-
-
 pause(1)
 
 %% Skid-pad test
@@ -240,7 +235,7 @@ Tsim = 100;
 curvature_profile = 2;
 speed_profile = 4;
 
-% Used in steady-state evaluations
+% % Used in FF and FB steady-state contributions
 % speed_profile = 1;
 % V = 80/3.6;
 % Tsim = 6;
@@ -400,7 +395,6 @@ xlabel('[s]'); ylabel('Steering angle [rad]');
 
 for i=1:length(s)
     plot(tout,delta_angles(i,:),'LineWidth',1);
-
 end
 axis normal
 
@@ -415,6 +409,4 @@ if save_files == true
     filename = sprintf('%s\\Control input at different CR.png',output_dir);
     saveas(fig, filename);
 end
-
-
 
